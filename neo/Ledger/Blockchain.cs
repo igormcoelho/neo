@@ -5,6 +5,7 @@ using Neo.Cryptography.ECC;
 using Neo.IO;
 using Neo.IO.Actors;
 using Neo.IO.Caching;
+using Neo.IO.Json;
 using Neo.Network.P2P;
 using Neo.Network.P2P.Payloads;
 using Neo.Persistence;
@@ -17,6 +18,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
+using System.IO;
+using System.Text;
 
 namespace Neo.Ledger
 {
@@ -34,6 +37,8 @@ namespace Neo.Ledger
         public static readonly uint[] GenerationAmount = { 8, 7, 6, 5, 4, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
         public static readonly TimeSpan TimePerBlock = TimeSpan.FromSeconds(SecondsPerBlock);
         public static readonly ECPoint[] StandbyValidators = Settings.Default.StandbyValidators.OfType<string>().Select(p => ECPoint.DecodePoint(p.HexToBytes(), ECCurve.Secp256r1)).ToArray();
+
+        private static string BlockStorageCache; 
 
 #pragma warning disable CS0612
         public static readonly RegisterTransaction GoverningToken = new RegisterTransaction
@@ -147,6 +152,7 @@ namespace Neo.Ledger
 
         public Blockchain(NeoSystem system, Store store)
         {
+            BlockStorageCache = "";
             this.system = system;
             this.Store = store;
             lock (GetType())
@@ -596,9 +602,84 @@ namespace Neo.Ledger
                 }
                 snapshot.Commit();
             }
+            //Console.WriteLine($"Going to dump...");
+	    //DumpOnPersist(Store.GetStorages().Find(), block.Index);
+	    DumpBlockOnPersist(Store.GetStorages().Find(), block.Index);
             UpdateCurrentSnapshot();
             OnPersistCompleted(block);
         }
+
+        private static void DumpBlockOnPersist<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> states, uint blockIndex)
+            where TKey : ISerializable
+            where TValue : ISerializable
+        {
+	    string dirPath = "./Storage";
+            Directory.CreateDirectory(dirPath);
+            string path = $"{HandlePaths(dirPath,blockIndex)}/dump-block-{blockIndex.ToString()}.json";
+            //Console.WriteLine($"file {path}");
+            IEnumerable<JObject> items = states.Select(p =>
+            {
+                JObject state = new JObject();
+                state["key"] = p.Key.ToArray().ToHexString();
+                byte[] src = p.Value.ToArray();
+                StorageItem si = new StorageItem();
+                using (MemoryStream stream = new MemoryStream(src)) {
+                  using (BinaryReader reader = new BinaryReader(stream)) {
+                    si.Deserialize(reader);
+                  }
+                }
+                uint h = si.Height;
+                if(h != blockIndex)
+                  return null;
+                state["value"] = p.Value.ToArray().ToHexString();
+                return state;
+            });
+            IEnumerable<JObject> itemsFilter = items.Where(p => p != null);
+            JArray array = new JArray(itemsFilter);
+            
+            BlockStorageCache = BlockStorageCache + blockIndex.ToString() + "\t" + array.Count.ToString() + "\n";
+            BlockStorageCache = BlockStorageCache + array.ToString() + "\n";
+
+            if((blockIndex % 1000 == 0) || (blockIndex > 2873330)) {
+                File.WriteAllText(path, BlockStorageCache);
+                BlockStorageCache = "";
+            }
+            //File.WriteAllText(path, array.ToString());
+            //Console.WriteLine($"DumpInBlock States have been dumped into file {path}");
+        }
+
+        private static string HandlePaths(string dirPath, uint blockIndex)
+        {
+		uint storagePerFolder = 100000;
+		uint folder = ((blockIndex/storagePerFolder)+1)*storagePerFolder;
+		string dirPathWithBlock = $"{dirPath}/BlockStorage_{folder}"; 
+		Directory.CreateDirectory(dirPathWithBlock);
+		return dirPathWithBlock; 
+        }
+
+        private static void DumpOnPersist<TKey, TValue>(IEnumerable<KeyValuePair<TKey, TValue>> states, uint blockIndex)
+            where TKey : ISerializable
+            where TValue : ISerializable
+        {
+            string path = "dump-"+blockIndex.ToString()+".json";
+            Console.WriteLine($"file {path}");
+            File.WriteAllText(path, $"myballs");
+            Console.WriteLine($"Count of state is {states.Count().ToString()}");
+            File.WriteAllText(path, "Size is: " + states.Count().ToString());
+
+            JArray array = new JArray(states.Select(p =>
+            {
+                JObject state = new JObject();
+                state["value"] = p.Value.ToArray().ToHexString();
+                state["key"] = p.Key.ToArray().ToHexString();
+                return state;
+            }));
+            Console.WriteLine($"Curent Storage State hash is {Crypto.Default.Hash256(Encoding.UTF8.GetBytes(array.ToString()))}");
+            Console.WriteLine($"Going to WriteAllText....");
+            File.WriteAllText(path, array.ToString());
+            Console.WriteLine($"States have been dumped into file {path} at height {blockIndex}");
+        }
+
 
         protected override void PostStop()
         {
