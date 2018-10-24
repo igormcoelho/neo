@@ -152,7 +152,7 @@ namespace Neo.Ledger
 
         public Blockchain(NeoSystem system, Store store)
         {
-            BlockStorageCache = "";
+            BlockStorageCache = "[";
             this.system = system;
             this.Store = store;
             lock (GetType())
@@ -617,10 +617,8 @@ namespace Neo.Ledger
             Directory.CreateDirectory(dirPath);
             string path = $"{HandlePaths(dirPath,blockIndex)}/dump-block-{blockIndex.ToString()}.json";
             //Console.WriteLine($"file {path}");
-            IEnumerable<JObject> items = states.Select(p =>
+            JArray array = new JArray(states.Where(p => 
             {
-                JObject state = new JObject();
-                state["key"] = p.Key.ToArray().ToHexString();
                 byte[] src = p.Value.ToArray();
                 StorageItem si = new StorageItem();
                 using (MemoryStream stream = new MemoryStream(src)) {
@@ -629,20 +627,22 @@ namespace Neo.Ledger
                   }
                 }
                 uint h = si.Height;
-                if(h != blockIndex)
-                  return null;
+                return h == blockIndex;
+            }).Select(p =>
+            {
+                JObject state = new JObject();
+                state["key"] = p.Key.ToArray().ToHexString();
                 state["value"] = p.Value.ToArray().ToHexString();
                 return state;
-            });
-            IEnumerable<JObject> itemsFilter = items.Where(p => p != null);
-            JArray array = new JArray(itemsFilter);
+            }));
             
-            BlockStorageCache = BlockStorageCache + blockIndex.ToString() + "\t" + array.Count.ToString() + "\n";
-            BlockStorageCache = BlockStorageCache + array.ToString() + "\n";
+            BlockStorageCache = BlockStorageCache + "{\"block\":"+blockIndex.ToString() + ",\"size\":" + array.Count.ToString() + ",\"storage\":\n";
+            BlockStorageCache = BlockStorageCache + array.ToString() + "},\n";
 
-            if((blockIndex % 1000 == 0) || (blockIndex > 2873330)) {
+            if((blockIndex % 1000 == 0) || (blockIndex > 2883000)) {
+                BlockStorageCache += "]";
                 File.WriteAllText(path, BlockStorageCache);
-                BlockStorageCache = "";
+                BlockStorageCache = "[";
             }
             //File.WriteAllText(path, array.ToString());
             //Console.WriteLine($"DumpInBlock States have been dumped into file {path}");
@@ -651,7 +651,9 @@ namespace Neo.Ledger
         private static string HandlePaths(string dirPath, uint blockIndex)
         {
 		uint storagePerFolder = 100000;
-		uint folder = ((blockIndex/storagePerFolder)+1)*storagePerFolder;
+		uint folder = (((blockIndex-1)/storagePerFolder)+1)*storagePerFolder;
+                if(blockIndex==0)
+                	folder=0;
 		string dirPathWithBlock = $"{dirPath}/BlockStorage_{folder}"; 
 		Directory.CreateDirectory(dirPathWithBlock);
 		return dirPathWithBlock; 
