@@ -348,7 +348,7 @@ namespace Neo.Consensus
             return Math.Max(GetUtcNow().ToTimestamp(), context.SnapshotHeader.Timestamp + 1);
         }
 
-        public DateTime GetUtcNow()
+        public virtual DateTime GetUtcNow()
         {
             return DateTime.UtcNow;
         }

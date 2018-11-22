@@ -210,7 +210,6 @@ namespace Neo.Consensus
             //uut = ActorSystem.ActorOf(ConsensusService.Props(system, context));
             uut = system.ActorSystem.ActorOf(Akka.Actor.Props.Create(() => new ConsensusService(system, context)).WithMailbox("consensus-service-mailbox"));
 
-            var mockConsensus = new Mock<ConsensusService>();
             //Consensus.Tell(new ConsensusService.Start());
             //uut = new ConsensusService(system, context);
         }
@@ -218,7 +217,18 @@ namespace Neo.Consensus
         [TestMethod]
         public void ConsensusStart()
         {
-            uut.Tell(new ConsensusService.Start());
+            //uut.Tell(new ConsensusService.Start());
+        }
+
+        [TestMethod]
+        public void ConsensusGetTime()
+        {
+            var mockConsensus = new Mock<ConsensusService>();
+            mockConsensus
+              .Setup(m => m.GetUtcNow())
+              .Returns(new DateTime(1));
+
+            //mockConsensus.GetUtcNow().Should().Be(2);
         }
     }
 }
