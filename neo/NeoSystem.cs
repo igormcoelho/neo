@@ -20,13 +20,19 @@ namespace Neo
             $"remote-node-mailbox {{ mailbox-type: \"{typeof(RemoteNodeMailbox).AssemblyQualifiedName}\" }}" +
             $"protocol-handler-mailbox {{ mailbox-type: \"{typeof(ProtocolHandlerMailbox).AssemblyQualifiedName}\" }}" +
             $"consensus-service-mailbox {{ mailbox-type: \"{typeof(ConsensusServiceMailbox).AssemblyQualifiedName}\" }}");
-        public IActorRef Blockchain { get; }
-        public IActorRef LocalNode { get; }
-        internal IActorRef TaskManager { get; }
+        public IActorRef Blockchain { get; private set; }
+        public IActorRef LocalNode { get; private set; }
+        internal IActorRef TaskManager { get; private set; }
         public IActorRef Consensus { get; private set; }
         public RpcServer RpcServer { get; private set; }
 
         public NeoSystem(Store store)
+        {
+            if(store != null)
+                Initialize(store);
+        }
+
+        public void Initialize(Store store)
         {
             this.Blockchain = ActorSystem.ActorOf(Ledger.Blockchain.Props(this, store));
             this.LocalNode = ActorSystem.ActorOf(Network.P2P.LocalNode.Props(this));

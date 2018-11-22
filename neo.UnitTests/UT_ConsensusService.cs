@@ -17,6 +17,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using Akka.Actor;
+using Akka.Configuration;
+
 namespace Neo.Consensus
 {
     public class TestStore : Store
@@ -267,15 +270,19 @@ namespace Neo.Consensus
     [TestClass]
     internal class UT_ConsensusService
     {
-        ConsensusService uut;
+        //ConsensusService uut;
+        IActorRef uut;
 
         [TestInitialize]
         public void TestSetup()
         {
-            Store store = new TestStore();
-            NeoSystem system = new NeoSystem(store);
+            //Store store = new TestStore();
+            NeoSystem system = new NeoSystem(null);
             IConsensusContext context = new TestConsensusContext();
-            uut = new ConsensusService(system, context);
+            //uut = ActorSystem.ActorOf(ConsensusService.Props(system, context));
+            uut = system.ActorSystem.ActorOf(Akka.Actor.Props.Create(() => new ConsensusService(system, context)).WithMailbox("consensus-service-mailbox"));
+            //Consensus.Tell(new ConsensusService.Start());
+            //uut = new ConsensusService(system, context);
         }
 
         [TestMethod]

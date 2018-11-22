@@ -332,6 +332,11 @@ namespace Neo.Consensus
             return Akka.Actor.Props.Create(() => new ConsensusService(system, wallet)).WithMailbox("consensus-service-mailbox");
         }
 
+        //public static Props Props(NeoSystem system, IConsensusContext context)
+        //{
+        //    return Akka.Actor.Props.Create(() => new ConsensusService(system, context)).WithMailbox("consensus-service-mailbox");
+        //}
+
         private void RequestChangeView()
         {
             context.State |= ConsensusState.ViewChanging;
