@@ -21,7 +21,7 @@ namespace Neo.Consensus
         public class SetViewNumber { public byte ViewNumber; }
         internal class Timer { public uint Height; public byte ViewNumber; }
 
-        private readonly ConsensusContext context;
+        private readonly IConsensusContext context;
         private readonly NeoSystem system;
         private DateTime block_received_time;
 
@@ -29,6 +29,12 @@ namespace Neo.Consensus
         {
             this.system = system;
             this.context = new ConsensusContext(wallet);
+        }
+
+        public ConsensusService(NeoSystem system, IConsensusContext context)
+        {
+            this.system = system;
+            this.context = context;
         }
 
         private bool AddTransaction(Transaction tx, bool verify)

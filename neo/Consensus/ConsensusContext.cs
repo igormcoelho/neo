@@ -13,24 +13,94 @@ using System.Linq;
 
 namespace Neo.Consensus
 {
-    internal class ConsensusContext : IDisposable
+    internal class ConsensusContext : IConsensusContext
     {
         public const uint Version = 0;
-        public ConsensusState State;
-        public UInt256 PrevHash;
-        public uint BlockIndex;
-        public byte ViewNumber;
+        private ConsensusState _State;
+        public ConsensusState State
+        {
+            get => _State;
+            set => _State = value;
+        }
+        private UInt256 _PrevHash;
+        public UInt256 PrevHash
+        {
+            get => _PrevHash;
+            set => _PrevHash = value;
+        }
+        private uint _BlockIndex;
+        public uint BlockIndex
+        {
+            get => _BlockIndex;
+            set => _BlockIndex = value;
+        }
+        private byte _ViewNumber;
+        public byte ViewNumber
+        {
+            get => _ViewNumber;
+            set => _ViewNumber = value;
+        }
         private Snapshot Snapshot;
-        public ECPoint[] Validators;
-        public int MyIndex;
-        public uint PrimaryIndex;
-        public uint Timestamp;
-        public ulong Nonce;
-        public UInt160 NextConsensus;
-        public UInt256[] TransactionHashes;
-        public Dictionary<UInt256, Transaction> Transactions;
-        public byte[][] Signatures;
-        public byte[] ExpectedView;
+        private ECPoint[] _Validators;
+        public ECPoint[] Validators
+        {
+            get => _Validators;
+            set => _Validators = value;
+        }
+        private int _MyIndex;
+        public int MyIndex
+        {
+            get => _MyIndex;
+            set => _MyIndex = value;
+        }
+        private uint _PrimaryIndex;
+        public uint PrimaryIndex
+        {
+            get => _PrimaryIndex;
+            set => _PrimaryIndex = value;
+        }
+        private uint _Timestamp;
+        public uint Timestamp
+        {
+            get => _Timestamp;
+            set => _Timestamp = value;
+        }
+        private ulong _Nonce;
+        public ulong Nonce
+        {
+            get => _Nonce;
+            set => _Nonce = value;
+        }
+        private UInt160 _NextConsensus;
+        public UInt160 NextConsensus
+        {
+            get => _NextConsensus;
+            set => _NextConsensus = value;
+        }
+        private UInt256[] _TransactionHashes;
+        public UInt256[] TransactionHashes
+        {
+            get => _TransactionHashes;
+            set => _TransactionHashes = value;
+        }
+        private Dictionary<UInt256, Transaction> _Transactions;
+        public Dictionary<UInt256, Transaction> Transactions
+        {
+            get => _Transactions;
+            set => _Transactions = value;
+        }
+        private byte[][] _Signatures;
+        public byte[][] Signatures
+        {
+            get => _Signatures;
+            set => _Signatures = value;
+        }
+        private byte[] _ExpectedView;
+        public byte[] ExpectedView
+        {
+            get => _ExpectedView;
+            set => _ExpectedView = value;
+        }
         private KeyPair KeyPair;
         private readonly Wallet wallet;
 
