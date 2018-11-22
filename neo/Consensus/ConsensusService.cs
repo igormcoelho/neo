@@ -53,7 +53,7 @@ namespace Neo.Consensus
                     Log($"send prepare response");
                     context.State |= ConsensusState.SignatureSent;
                     context.SignHeader();
-                    system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = context.MakePrepareResponse(context.Signatures[context.MyIndex]) });
+                    SendDirectly(context.MakePrepareResponse(context.Signatures[context.MyIndex]));
                     CheckSignatures();
                 }
                 else
@@ -89,7 +89,8 @@ namespace Neo.Consensus
             {
                 Block block = context.CreateBlock();
                 Log($"relay block: {block.Hash}");
-                system.LocalNode.Tell(new LocalNode.Relay { Inventory = block });
+                //system.LocalNode.Tell(new LocalNode.Relay { Inventory = block });
+                Relay(block);
                 context.State |= ConsensusState.BlockSent;
             }
         }
@@ -228,10 +229,7 @@ namespace Neo.Consensus
             if (context.Transactions.Count < context.TransactionHashes.Length)
             {
                 UInt256[] hashes = context.TransactionHashes.Where(i => !context.Transactions.ContainsKey(i)).ToArray();
-                system.TaskManager.Tell(new TaskManager.RestartTasks
-                {
-                    Payload = InvPayload.Create(InventoryType.TX, hashes)
-                });
+                RestartTasks(InvPayload.Create(InventoryType.TX, hashes));
             }
         }
 
@@ -296,11 +294,13 @@ namespace Neo.Consensus
                     context.Fill(GetCurrentTimestamp());
                     context.SignHeader();
                 }
-                system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = context.MakePrepareRequest() });
+                //system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = context.MakePrepareRequest() });
+                SendDirectly(context.MakePrepareRequest());
                 if (context.TransactionHashes.Length > 1)
                 {
                     foreach (InvPayload payload in InvPayload.CreateGroup(InventoryType.TX, context.TransactionHashes.Skip(1).ToArray()))
-                        system.LocalNode.Tell(Message.Create("inv", payload));
+                        //system.LocalNode.Tell(Message.Create("inv", payload));
+                        TellMessage(Message.Create("inv", payload));
                 }
                 ChangeTimer(TimeSpan.FromSeconds(Blockchain.SecondsPerBlock << (timer.ViewNumber + 1)));
             }
@@ -338,7 +338,8 @@ namespace Neo.Consensus
             context.ExpectedView[context.MyIndex]++;
             Log($"request change view: height={context.BlockIndex} view={context.ViewNumber} nv={context.ExpectedView[context.MyIndex]} state={context.State}");
             ChangeTimer(TimeSpan.FromSeconds(Blockchain.SecondsPerBlock << (context.ExpectedView[context.MyIndex] + 1)));
-            system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = context.MakeChangeView() });
+            //system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = context.MakeChangeView() });
+            SendDirectly(context.MakeChangeView());
             CheckExpectedView(context.ExpectedView[context.MyIndex]);
         }
 
@@ -351,6 +352,30 @@ namespace Neo.Consensus
         {
             return DateTime.UtcNow;
         }
+
+        private void SendDirectly(ConsensusPayload message)
+        {
+            system.LocalNode.Tell(new LocalNode.SendDirectly { Inventory = message });
+        }
+
+        private void Relay(Block block)
+        {
+            system.LocalNode.Tell(new LocalNode.Relay { Inventory = block });
+        }
+
+        private void RestartTasks(InvPayload payload)
+        {
+          system.TaskManager.Tell(new TaskManager.RestartTasks
+          {
+              Payload = payload
+          });
+        }
+
+        private void TellMessage(Message message)
+        {
+            system.LocalNode.Tell(message);
+        }
+
     }
 
     internal class ConsensusServiceMailbox : PriorityMailbox
