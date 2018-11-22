@@ -20,7 +20,7 @@ namespace Neo.Consensus
         public UInt256 PrevHash;
         public uint BlockIndex;
         public byte ViewNumber;
-        public Snapshot Snapshot;
+        private Snapshot Snapshot;
         public ECPoint[] Validators;
         public int MyIndex;
         public uint PrimaryIndex;
@@ -39,6 +39,17 @@ namespace Neo.Consensus
         public ConsensusContext(Wallet wallet)
         {
             this.wallet = wallet;
+        }
+
+        public uint SnapshotHeight => Snapshot.Height;
+
+        public Header SnapshotHeader => Snapshot.GetHeader(PrevHash);
+
+        public bool RejectTx(Transaction tx, bool verify)
+        {
+            return Snapshot.ContainsTransaction(tx.Hash) ||
+              (verify && !tx.Verify(Snapshot, Transactions.Values)) ||
+              !Plugin.CheckPolicy(tx);
         }
 
         public void ChangeView(byte view_number)

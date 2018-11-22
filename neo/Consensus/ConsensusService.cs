@@ -33,9 +33,7 @@ namespace Neo.Consensus
 
         private bool AddTransaction(Transaction tx, bool verify)
         {
-            if (context.Snapshot.ContainsTransaction(tx.Hash) ||
-                (verify && !tx.Verify(context.Snapshot, context.Transactions.Values)) ||
-                !Plugin.CheckPolicy(tx))
+            if (context.RejectTx(tx, verify))
             {
                 Log($"reject tx: {tx.Hash}{Environment.NewLine}{tx.ToArray().ToHexString()}", LogLevel.Warning);
                 RequestChangeView();
@@ -138,9 +136,9 @@ namespace Neo.Consensus
                 return;
             if (payload.PrevHash != context.PrevHash || payload.BlockIndex != context.BlockIndex)
             {
-                if (context.Snapshot.Height + 1 < payload.BlockIndex)
+                if (context.SnapshotHeight + 1 < payload.BlockIndex)
                 {
-                    Log($"chain sync: expected={payload.BlockIndex} current: {context.Snapshot.Height} nodes={LocalNode.Singleton.ConnectedCount}", LogLevel.Warning);
+                    Log($"chain sync: expected={payload.BlockIndex} current: {context.SnapshotHeight} nodes={LocalNode.Singleton.ConnectedCount}", LogLevel.Warning);
                 }
                 return;
             }
@@ -183,7 +181,7 @@ namespace Neo.Consensus
             if (payload.ValidatorIndex != context.PrimaryIndex) return;
             Log($"{nameof(OnPrepareRequestReceived)}: height={payload.BlockIndex} view={message.ViewNumber} index={payload.ValidatorIndex} tx={message.TransactionHashes.Length}");
             if (!context.State.HasFlag(ConsensusState.Backup)) return;
-            if (payload.Timestamp <= context.Snapshot.GetHeader(context.PrevHash).Timestamp || payload.Timestamp > GetUtcNow().AddMinutes(10).ToTimestamp())
+            if (payload.Timestamp <= context.SnapshotHeader.Timestamp || payload.Timestamp > GetUtcNow().AddMinutes(10).ToTimestamp())
             {
                 Log($"Timestamp incorrect: {payload.Timestamp}", LogLevel.Warning);
                 return;
@@ -340,7 +338,7 @@ namespace Neo.Consensus
 
         public uint GetCurrentTimestamp()
         {
-            return Math.Max(GetUtcNow().ToTimestamp(), context.Snapshot.GetHeader(context.PrevHash).Timestamp + 1);
+            return Math.Max(GetUtcNow().ToTimestamp(), context.SnapshotHeader.Timestamp + 1);
         }
 
         public DateTime GetUtcNow()
