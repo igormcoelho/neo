@@ -20,82 +20,10 @@ using System.Linq;
 using Akka.Actor;
 using Akka.Configuration;
 
+using Moq;
+
 namespace Neo.Consensus
 {
-    public class TestStore : Store
-    {
-        public override DataCache<UInt160, AccountState> GetAccounts()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt256, AssetState> GetAssets()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt256, BlockState> GetBlocks()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt160, ContractState> GetContracts()
-        {
-            return null;
-        }
-
-        public override Snapshot GetSnapshot()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt256, SpentCoinState> GetSpentCoins()
-        {
-            return null;
-        }
-
-        public override DataCache<StorageKey, StorageItem> GetStorages()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt256, TransactionState> GetTransactions()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt256, UnspentCoinState> GetUnspentCoins()
-        {
-            return null;
-        }
-
-        public override DataCache<ECPoint, ValidatorState> GetValidators()
-        {
-            return null;
-        }
-
-        public override DataCache<UInt32Wrapper, HeaderHashList> GetHeaderHashList()
-        {
-            return null;
-        }
-
-        public override MetaDataCache<ValidatorsCountState> GetValidatorsCount()
-        {
-            return null;
-        }
-
-        public override MetaDataCache<HashIndexState> GetBlockHashIndex()
-        {
-            return null;
-        }
-
-        public override MetaDataCache<HashIndexState> GetHeaderHashIndex()
-        {
-            return null;
-        }
-    }
-
-
     internal class TestConsensusContext : IConsensusContext
     {
         private ConsensusState _State;
@@ -268,7 +196,7 @@ namespace Neo.Consensus
     }
 
     [TestClass]
-    internal class UT_ConsensusService
+    public class UT_ConsensusService
     {
         //ConsensusService uut;
         IActorRef uut;
@@ -281,14 +209,16 @@ namespace Neo.Consensus
             IConsensusContext context = new TestConsensusContext();
             //uut = ActorSystem.ActorOf(ConsensusService.Props(system, context));
             uut = system.ActorSystem.ActorOf(Akka.Actor.Props.Create(() => new ConsensusService(system, context)).WithMailbox("consensus-service-mailbox"));
+
+            var mockConsensus = new Mock<ConsensusService>();
             //Consensus.Tell(new ConsensusService.Start());
             //uut = new ConsensusService(system, context);
         }
 
         [TestMethod]
-        public void InvocationScript_Get()
+        public void ConsensusStart()
         {
-            //uut.InvocationScript.Should().BeNull();
+            uut.Tell(new ConsensusService.Start());
         }
     }
 }
