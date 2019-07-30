@@ -35,8 +35,9 @@ namespace Neo.Network.P2P
         public RemoteNode(NeoSystem system, object connection, IPEndPoint remote, IPEndPoint local)
             : base(connection, remote, local)
         {
+            System.Console.WriteLine("Started build RemoteNode!");
             this.system = system;
-            this.protocol = Context.ActorOf(ProtocolHandler.Props(system));
+            this.protocol = null;//Context.ActorOf(ProtocolHandler.Props(system));
             LocalNode.Singleton.RemoteNodes.TryAdd(Self, this);
 
             var capabilities = new List<NodeCapability>
@@ -47,6 +48,7 @@ namespace Neo.Network.P2P
             if (LocalNode.Singleton.ListenerTcpPort > 0) capabilities.Add(new ServerCapability(NodeCapabilityType.TcpServer, (ushort)LocalNode.Singleton.ListenerTcpPort));
             if (LocalNode.Singleton.ListenerWsPort > 0) capabilities.Add(new ServerCapability(NodeCapabilityType.WsServer, (ushort)LocalNode.Singleton.ListenerWsPort));
 
+            System.Console.WriteLine("Finished build RemoteNode! Will send data!");
             SendMessage(Message.Create(MessageCommand.Version, VersionPayload.Create(LocalNode.Nonce, LocalNode.UserAgent, capabilities.ToArray())));
         }
 
@@ -119,6 +121,7 @@ namespace Neo.Network.P2P
 
         protected override void OnReceive(object message)
         {
+            System.Console.WriteLine("RemoteNode: OnReceive message");
             base.OnReceive(message);
             switch (message)
             {
@@ -188,6 +191,7 @@ namespace Neo.Network.P2P
 
         private void OnVersionPayload(VersionPayload version)
         {
+            System.Console.WriteLine("On Version Payload (after OnReceived)");
             Version = version;
             foreach (NodeCapability capability in version.Capabilities)
             {
@@ -203,16 +207,50 @@ namespace Neo.Network.P2P
                         break;
                 }
             }
-            if (version.Nonce == LocalNode.Nonce || version.Magic != ProtocolSettings.Default.Magic)
+
+            System.Console.WriteLine("Aqui!!!!");
+            System.Console.WriteLine("Vai conferir Nonce!!!!");
+            bool comp = version.Nonce == LocalNode.Nonce;
+            System.Console.WriteLine("Vai conferir Magic!!!!");
+            bool comp2 = version.Magic != ProtocolSettings.Default.Magic;
+
+            System.Console.WriteLine("Print Remote");
+            string ip = "";
+            if(Remote is null)
+                System.Console.WriteLine("Print Remote NULL");
+            else
+                ip = Remote.Address.ToString();
+            
+            System.Console.WriteLine("Vai comp ||");
+            if (comp || comp2)
             {
+                System.Console.WriteLine("Aqui2!!!!");
                 Disconnect(true);
                 return;
             }
-            if (LocalNode.Singleton.RemoteNodes.Values.Where(p => p != this).Any(p => p.Remote.Address.Equals(Remote.Address) && p.Version?.Nonce == version.Nonce))
+
+                        System.Console.WriteLine("Print Version");
+            if(version is null)
+                System.Console.WriteLine("Print Version NULL");
+
+            System.Console.WriteLine("Vai outra doideira!!!!");
+            IEnumerable<RemoteNode> nodes = LocalNode.Singleton.RemoteNodes.Values.Where(p => p != this);
+            System.Console.WriteLine("Vai outra doideira x4!!!!");
+            uint v = version.Nonce;
+            System.Console.WriteLine($"Version {v} IP {ip} nodes size {nodes.Count()}!");
+
+            foreach(var node in nodes)
+                System.Console.WriteLine($"node: {node.ToString()}");
+            if (nodes.Any(p => p.GetAddress().Equals(this.GetAddress()) && p.Version?.Nonce == v))
             {
+                System.Console.WriteLine("Aqui3 Disconnect!!!!");
+                if(nodes.Any(p => p.GetAddress().Equals(this.GetAddress())))
+                    System.Console.WriteLine($"Same Address {this.GetAddress()}");
+
                 Disconnect(true);
                 return;
             }
+            System.Console.WriteLine("Aqui4!!!!");
             SendMessage(Message.Create(MessageCommand.Verack));
         }
 

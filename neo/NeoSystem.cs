@@ -22,6 +22,8 @@ namespace Neo
             $"consensus-service-mailbox {{ mailbox-type: \"{typeof(ConsensusServiceMailbox).AssemblyQualifiedName}\" }}");
         public IActorRef Blockchain { get; }
         public IActorRef LocalNode { get; }
+
+        public LocalNode LocalNodeSingleton{ get; }
         internal IActorRef TaskManager { get; }
         public IActorRef Consensus { get; private set; }
         public RpcServer RpcServer { get; private set; }

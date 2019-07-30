@@ -21,6 +21,12 @@ namespace Neo.Network.P2P
         /// </summary>
         private const int connectionTimeoutLimit = 60;
 
+        public string GetAddress()
+        {
+            if(Remote is null)
+                return "";
+            return Remote.Address.ToString() + "port"+ Remote.Port.ToString();
+        }
         public IPEndPoint Remote { get; }
         public IPEndPoint Local { get; }
 
@@ -30,6 +36,7 @@ namespace Neo.Network.P2P
         private bool disconnected = false;
         protected Connection(object connection, IPEndPoint remote, IPEndPoint local)
         {
+            Console.WriteLine($"Started build Connection! {connection.ToString()}");
             this.Remote = remote;
             this.Local = local;
             this.timer = Context.System.Scheduler.ScheduleTellOnceCancelable(TimeSpan.FromSeconds(connectionTimeoutLimitStart), Self, Timer.Instance, ActorRefs.NoSender);
@@ -37,12 +44,16 @@ namespace Neo.Network.P2P
             {
                 case IActorRef tcp:
                     this.tcp = tcp;
+                    Console.WriteLine("Crazy TCP!!");
                     break;
                 case WebSocket ws:
                     this.ws = ws;
                     WsReceive();
                     break;
+                default:
+                    break;
             }
+            Console.WriteLine("Finished build Connection!");
         }
 
         private void WsReceive()
